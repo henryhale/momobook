@@ -23,6 +23,7 @@ object CategoryStyles {
         "Taxes & Govt" to CategoryStyle(Icons.Rounded.AccountBalance, Color(0xFF7F56D9)),
         "Bank & Savings" to CategoryStyle(Icons.Rounded.Savings, Color(0xFF155EEF)),
         "Interest" to CategoryStyle(Icons.Rounded.TrendingUp, Color(0xFF12B76A)),
+        "Loans" to CategoryStyle(Icons.Rounded.RequestQuote, Color(0xFFDC6803)),
         "Betting" to CategoryStyle(Icons.Rounded.Casino, Color(0xFFDD2590)),
         "Income" to CategoryStyle(Icons.Rounded.SouthWest, Color(0xFF17B26A)),
         "Cash Deposit" to CategoryStyle(Icons.Rounded.AccountBalanceWallet, Color(0xFF0E9384)),

@@ -34,7 +34,7 @@ fun PasteSmsDialog(onDismiss: () -> Unit, onSubmit: (String) -> Boolean) {
                     shape = RoundedCornerShape(16.dp),
                     placeholder = { Text("You have received UGX 80000 from …") },
                     isError = error,
-                    supportingText = if (error) {{ Text("That doesn't look like a MoMo transaction message.") }} else null,
+                    supportingText = if (error) {{ Text("That doesn't look like a mobile money transaction message.") }} else null,
                 )
                 TextButton(onClick = { clipboard.getText()?.text?.let { text = it; error = false } }) {
                     Text("Paste from clipboard")

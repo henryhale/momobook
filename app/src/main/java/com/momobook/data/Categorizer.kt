@@ -10,10 +10,11 @@ object Categorizer {
     val spendCategories = listOf(
         "Data & Airtime", "Transfers", "Merchants & Bills", "Cash Withdrawal", "Food & Shopping",
         "Transport", "Electricity", "Water", "TV & Internet", "Education", "Health",
-        "Taxes & Govt", "Bank & Savings", "Betting", OTHER,
+        "Taxes & Govt", "Bank & Savings", LOANS, "Betting", OTHER,
     )
     const val CASH_DEPOSIT = "Cash Deposit"
-    val incomeCategories = listOf(INCOME, CASH_DEPOSIT, "Interest", "Salary", "Business", "Family & Friends", "Refund", OTHER)
+    const val LOANS = "Loans"
+    val incomeCategories = listOf(INCOME, CASH_DEPOSIT, LOANS, "Interest", "Salary", "Business", "Family & Friends", "Refund", OTHER)
 
     private fun rx(vararg words: String) =
         Regex(words.joinToString("|") { """\b${Regex.escape(it)}""" }, RegexOption.IGNORE_CASE)
@@ -26,6 +27,7 @@ object Categorizer {
         rx("SCHOOL", "UNIVERSITY", "COLLEGE", "ACADEMY", "SCHOOLPAY", "TUITION") to "Education",
         rx("URA", "REVENUE AUTHORITY", "KCCA", "GOVERNMENT", "MINISTRY", "NIRA", "URSB") to "Taxes & Govt",
         rx("AGENT", "WITHDRAW", "CASH OUT") to "Cash Withdrawal",
+        rx("QUICK LOAN", "QUICKLOAN", "LOAN") to LOANS,
         rx("BANK", "SACCO", "MOKASH", "XTRA", "YINVESTA", "SAVINGS") to "Bank & Savings",
         rx("SUPERMARKET", "FOODS", "RESTAURANT", "CAFE", "GLOVO", "JUMIA", "SHOPRITE", "CARREFOUR", "CAPITAL SHOPPERS", "MAJID", "BAKERY", "KFC", "CAFE JAVAS") to "Food & Shopping",
         rx("SAFEBODA", "UBER", "BOLT", "FUEL", "SHELL", "STABEX", "TOTALENERGIES", "TAXI", "BUS") to "Transport",
@@ -36,6 +38,7 @@ object Categorizer {
     fun categorize(p: ParsedTxn): String {
         if (p.direction == Direction.CR) return when {
             p.kind == Kind.DEPOSIT -> CASH_DEPOSIT
+            LOAN.containsMatchIn(p.counterparty) -> LOANS
             p.counterparty.contains("INTEREST", ignoreCase = true) -> "Interest"
             else -> INCOME
         }
@@ -46,6 +49,8 @@ object Categorizer {
         rules.firstOrNull { it.first.containsMatchIn(p.counterparty) }?.let { return it.second }
         return if (p.kind == Kind.SENT || p.phone != null) "Transfers" else "Merchants & Bills"
     }
+
+    private val LOAN = Regex("""\bloans?\b|quick\s*loan""", RegexOption.IGNORE_CASE)
 
     /** MTN product codes such as CISDATABUN, PAKABUN50 — all bundle purchases. */
     private val BUNDLE_CODE = Regex("""[A-Z]*BUN\d*\b""")

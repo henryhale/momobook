@@ -10,6 +10,7 @@ import com.momobook.data.Entry
 import com.momobook.data.Ledger
 import com.momobook.data.MomoParser
 import com.momobook.data.Prefs
+import com.momobook.data.Provider
 import com.momobook.data.ThemeMode
 import com.momobook.data.SmsRef
 import com.momobook.sms.SmsInbox
@@ -45,11 +46,14 @@ class MainViewModel(private val app: Application) : AndroidViewModel(app) {
         if (w == null) es else es.filter { it.wallet == w }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    /** Known wallets in a stable order, labelled "SIM 1", "SIM 2", … */
+    /** Known wallets in a stable order: MTN first, then Airtel. Labelled "MTN", or "MTN SIM 1", "MTN SIM 2" with two SIMs. */
     val wallets: StateFlow<List<Wallet>> = Ledger.entries.map { es ->
-        es.map { it.wallet }.filter { it.isNotEmpty() }.distinct()
-            .sortedBy { it.toLongOrNull() ?: Long.MAX_VALUE }
-            .mapIndexed { i, key -> Wallet(key, "SIM ${i + 1}") }
+        val keys = es.map { it.wallet }.filter { it.isNotEmpty() }.distinct()
+        listOf(Provider.MTN to "MTN", Provider.AIRTEL to "Airtel").flatMap { (provider, name) ->
+            val ks = keys.filter { Provider.ofWallet(it) == provider }
+                .sortedBy { Provider.simOfWallet(it)?.toLongOrNull() ?: Long.MAX_VALUE }
+            ks.mapIndexed { i, key -> Wallet(key, if (ks.size > 1) "$name SIM ${i + 1}" else name) }
+        }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val loaded: StateFlow<Boolean> = Ledger.loaded

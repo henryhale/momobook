@@ -8,6 +8,29 @@ enum class Direction { DR, CR }
 
 enum class Kind { RECEIVED, DEPOSIT, PAYMENT, SENT, WITHDRAW, OTHER }
 
+/** Mobile money network. Each provider keeps its own wallet (and balance) per SIM. */
+enum class Provider {
+    MTN, AIRTEL;
+
+    companion object {
+        private const val AIRTEL_KEY = "airtel"
+
+        /** Wallet key: the SIM subscription id for MTN (kept for existing data), "airtel[:sim]" for Airtel. */
+        fun walletKey(provider: Provider, simId: String?): String = when (provider) {
+            MTN -> simId.orEmpty()
+            AIRTEL -> if (simId.isNullOrEmpty()) AIRTEL_KEY else "$AIRTEL_KEY:$simId"
+        }
+
+        /** Key used when the SIM is unknown (pasted messages). */
+        fun unknownWallet(provider: Provider) = walletKey(provider, null)
+
+        fun ofWallet(key: String): Provider = if (key == AIRTEL_KEY || key.startsWith("$AIRTEL_KEY:")) AIRTEL else MTN
+
+        fun simOfWallet(key: String): String? =
+            (if (ofWallet(key) == AIRTEL) key.substringAfter(':', "") else key).ifEmpty { null }
+    }
+}
+
 /** Result of parsing a single SMS body. */
 data class ParsedTxn(
     val txnId: String,
@@ -20,6 +43,7 @@ data class ParsedTxn(
     val phone: String?,
     val reason: String?,
     val occurredAt: Long?,
+    val provider: Provider = Provider.MTN,
 )
 
 /** Where a parsed transaction came from. smsId is null for pasted / just-received messages. */
@@ -52,7 +76,7 @@ data class Entry(
     val smsAddress: String?,
     val smsBody: String,
     val importedAt: Long,
-    /** Wallet key (SIM subscription id), "" when unknown (e.g. pasted). */
+    /** Wallet key, see [Provider.walletKey]. MTN: SIM subscription id, "" when unknown (e.g. pasted). */
     val wallet: String,
 ) {
     val isIn: Boolean get() = direction == Direction.CR

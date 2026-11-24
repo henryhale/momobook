@@ -12,7 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
-/** Journals MoMo SMS the moment they arrive, before anyone has a chance to delete them. */
+/** Journals MTN MoMo and Airtel Money SMS the moment they arrive, before anyone has a chance to delete them. */
 class SmsReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return

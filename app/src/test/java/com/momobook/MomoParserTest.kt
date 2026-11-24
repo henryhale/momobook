@@ -154,6 +154,7 @@ class MomoParserTest {
 
     @Test fun onlyMomoSenders() {
         assertEquals(true, MomoParser.isMomoSender("MTNMobMoney"))
-        assertEquals(false, MomoParser.isMomoSender("AirtelMoney"))
+        assertEquals(true, MomoParser.isMomoSender("AirtelMoney"))
+        assertEquals(false, MomoParser.isMomoSender("SafeBoda"))
     }
 }

@@ -85,7 +85,7 @@ class LedgerDb(context: Context) : SQLiteOpenHelper(context, "momo_ledger.db", n
                         address = c.getString(2),
                         body = c.getString(3),
                         date = c.getLong(4),
-                        simId = c.getString(5).ifBlank { null },
+                        simId = Provider.simOfWallet(c.getString(5)),
                     )
                 )
             }
@@ -105,16 +105,17 @@ class LedgerDb(context: Context) : SQLiteOpenHelper(context, "momo_ledger.db", n
         for (m in messages.sortedBy { it.date }) {
             if (!MomoParser.isMomoSender(m.address)) continue
             MomoParser.parseWithdrawRequest(m.body)?.let { recordRequest(db, it, m.date); continue }
-            val p = MomoParser.parse(m.body) ?: continue
+            val p = MomoParser.parse(m.body, m.address) ?: continue
             if (insert(db, p, m)) added++
         }
         return added
     }
 
     private fun insert(db: SQLiteDatabase, raw: ParsedTxn, sms: SmsRef): Boolean {
-        val wallet = sms.simId.orEmpty()
-        // MTN transaction IDs are global; synthetic ones (airtime, withdrawals without ID) are scoped to the wallet.
-        val parsed = if (wallet.isNotEmpty() && !raw.txnId.all(Char::isDigit)) raw.copy(txnId = "$wallet:${raw.txnId}") else raw
+        val wallet = Provider.walletKey(raw.provider, sms.simId)
+        val unknownWallet = Provider.unknownWallet(raw.provider)
+        // Transaction IDs are global; synthetic ones (airtime, withdrawals without ID) are scoped to the wallet.
+        val parsed = if (wallet != unknownWallet && !raw.txnId.all(Char::isDigit)) raw.copy(txnId = "$wallet:${raw.txnId}") else raw
         val occurredAt = parsed.occurredAt ?: sms.date
         val p = if (parsed.kind == Kind.WITHDRAW && parsed.fee == 0L) {
             parsed.copy(fee = requestedFee(db, parsed, occurredAt) ?: 0)
@@ -148,8 +149,8 @@ class LedgerDb(context: Context) : SQLiteOpenHelper(context, "momo_ledger.db", n
                WHERE txn_id = ? AND length(counterparty) < length(?) AND substr(?, 1, length(counterparty)) = counterparty""",
             arrayOf<Any?>(p.counterparty, p.reason, Categorizer.categorize(p), p.txnId, p.counterparty, p.counterparty),
         )
-        if (wallet.isNotEmpty()) {
-            db.execSQL("UPDATE entries SET wallet = ? WHERE txn_id = ? AND wallet = ''", arrayOf<Any?>(wallet, p.txnId))
+        if (wallet != unknownWallet) {
+            db.execSQL("UPDATE entries SET wallet = ? WHERE txn_id = ? AND wallet = ?", arrayOf<Any?>(wallet, p.txnId, unknownWallet))
         }
         // Already journaled (e.g. captured live by the receiver): just attach the inbox link.
         if (sms.smsId != null) {

@@ -34,7 +34,7 @@ class SampleInboxReport {
         for (s in sms) {
             if (!MomoParser.isMomoSender(s.address)) continue
             MomoParser.parseWithdrawRequest(s.body)?.let { requests += s.date to it; continue }
-            var p = MomoParser.parse(s.body)
+            var p = MomoParser.parse(s.body, s.address)
             if (p == null) {
                 if (s.body.contains("UGX") && Regex("(?i)balance").containsMatchIn(s.body)) unparsed += s.body
                 continue
@@ -44,7 +44,7 @@ class SampleInboxReport {
                 requests.lastOrNull { (t, r) -> r.amount == p!!.amount && r.agent.equals(p!!.counterparty, true) && t in (at - 172_800_000)..(at + 300_000) }
                     ?.let { p = p!!.copy(fee = it.second.fee) }
             }
-            p = p!!.copy(txnId = s.sim + ":" + p!!.txnId)
+            p = p!!.copy(txnId = s.sim + ":" + p!!.provider + ":" + p!!.txnId)
             val existing = byId[p!!.txnId]
             if (existing == null || p!!.counterparty.length > existing.second.counterparty.length) byId[p!!.txnId] = (existing?.first ?: s) to p!!
         }
@@ -61,7 +61,7 @@ class SampleInboxReport {
             return n to net
         }
         out.appendLine("Chain by SMS date: " + chain(bySms) + "   by occurredAt: " + chain(byOccurred))
-        bySms.groupBy { it.first.sim }.forEach { (sim, l) ->
+        bySms.groupBy { it.first.sim + "/" + it.second.provider }.forEach { (sim, l) ->
             out.appendLine("  SIM $sim: ${l.size} txns, chain breaks/net=${chain(l)}, final balance=${l.lastOrNull { it.second.balance != null }?.second?.balance}, " +
                 "first=${java.util.Date(l.first().first.date)}")
         }
