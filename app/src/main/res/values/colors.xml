@@ -1,0 +1,6 @@
+<resources>
+    <color name="brand_yellow">#FFFFC627</color>
+    <color name="brand_ink">#FF0E1525</color>
+    <color name="window_light">#FFF5F6FA</color>
+    <color name="window_dark">#FF0A0E16</color>
+</resources>
