@@ -121,7 +121,7 @@ fun SettingsScreen(
             }
             Spacer(Modifier.height(12.dp))
             Text(
-                "Turns your MTN MoMo and Airtel Money SMS into a personal journal with deposits, spending, fees and " +
+                "Turns your MTN MoMo, Airtel Money and Centenary Bank SMS into a personal journal with deposits, spending, fees and " +
                     "insights. Each message is copied into the journal so your history stays even if the SMS is deleted.",
                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

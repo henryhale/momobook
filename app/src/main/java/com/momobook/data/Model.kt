@@ -10,24 +10,44 @@ enum class Kind { RECEIVED, DEPOSIT, PAYMENT, SENT, WITHDRAW, OTHER }
 
 /** Mobile money network. Each provider keeps its own wallet (and balance) per SIM. */
 enum class Provider {
-    MTN, AIRTEL;
+    MTN, AIRTEL,
+
+    /** Centenary Bank account alerts. The wallet is the bank account, whichever SIM the SMS arrives on. */
+    CENTENARY;
 
     companion object {
         private const val AIRTEL_KEY = "airtel"
+        private const val CENTENARY_KEY = "centenary"
 
-        /** Wallet key: the SIM subscription id for MTN (kept for existing data), "airtel[:sim]" for Airtel. */
-        fun walletKey(provider: Provider, simId: String?): String = when (provider) {
+        /**
+         * Wallet key: the SIM subscription id for MTN (kept for existing data), "airtel[:sim]" for Airtel,
+         * "centenary[:account digits]" for Centenary.
+         */
+        fun walletKey(provider: Provider, simId: String?, account: String? = null): String = when (provider) {
             MTN -> simId.orEmpty()
             AIRTEL -> if (simId.isNullOrEmpty()) AIRTEL_KEY else "$AIRTEL_KEY:$simId"
+            CENTENARY -> if (account.isNullOrEmpty()) CENTENARY_KEY else "$CENTENARY_KEY:$account"
         }
 
-        /** Key used when the SIM is unknown (pasted messages). */
-        fun unknownWallet(provider: Provider) = walletKey(provider, null)
+        /** Key used when the SIM is unknown (pasted messages). Bank wallets don't depend on the SIM. */
+        fun unknownWallet(p: ParsedTxn) = walletKey(p.provider, null, p.account)
 
-        fun ofWallet(key: String): Provider = if (key == AIRTEL_KEY || key.startsWith("$AIRTEL_KEY:")) AIRTEL else MTN
+        fun ofWallet(key: String): Provider = when {
+            key == AIRTEL_KEY || key.startsWith("$AIRTEL_KEY:") -> AIRTEL
+            key == CENTENARY_KEY || key.startsWith("$CENTENARY_KEY:") -> CENTENARY
+            else -> MTN
+        }
 
-        fun simOfWallet(key: String): String? =
-            (if (ofWallet(key) == AIRTEL) key.substringAfter(':', "") else key).ifEmpty { null }
+        /** SIM subscription id behind a wallet key; null for unknown SIMs and bank accounts. */
+        fun simOfWallet(key: String): String? = when (ofWallet(key)) {
+            MTN -> key.ifEmpty { null }
+            AIRTEL -> key.substringAfter(':', "").ifEmpty { null }
+            CENTENARY -> null
+        }
+
+        /** Account digits of a bank wallet key ("centenary:260" -> "260"). */
+        fun accountOfWallet(key: String): String? =
+            if (ofWallet(key) == CENTENARY) key.substringAfter(':', "").ifEmpty { null } else null
     }
 }
 
@@ -44,6 +64,8 @@ data class ParsedTxn(
     val reason: String?,
     val occurredAt: Long?,
     val provider: Provider = Provider.MTN,
+    /** Bank account digits shown in the SMS (e.g. "260" from "A/C **260"). */
+    val account: String? = null,
 )
 
 /** Where a parsed transaction came from. smsId is null for pasted / just-received messages. */

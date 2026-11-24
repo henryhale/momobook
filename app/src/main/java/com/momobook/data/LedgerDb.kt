@@ -103,7 +103,7 @@ class LedgerDb(context: Context) : SQLiteOpenHelper(context, "momo_ledger.db", n
     fun ingest(db: SQLiteDatabase, messages: List<SmsRef>): Int {
         var added = 0
         for (m in messages.sortedBy { it.date }) {
-            if (!MomoParser.isMomoSender(m.address)) continue
+            if (!MomoParser.accepts(m.address, m.body)) continue
             MomoParser.parseWithdrawRequest(m.body)?.let { recordRequest(db, it, m.date); continue }
             val p = MomoParser.parse(m.body, m.address) ?: continue
             if (insert(db, p, m)) added++
@@ -112,8 +112,8 @@ class LedgerDb(context: Context) : SQLiteOpenHelper(context, "momo_ledger.db", n
     }
 
     private fun insert(db: SQLiteDatabase, raw: ParsedTxn, sms: SmsRef): Boolean {
-        val wallet = Provider.walletKey(raw.provider, sms.simId)
-        val unknownWallet = Provider.unknownWallet(raw.provider)
+        val wallet = Provider.walletKey(raw.provider, sms.simId, raw.account)
+        val unknownWallet = Provider.unknownWallet(raw)
         // Transaction IDs are global; synthetic ones (airtime, withdrawals without ID) are scoped to the wallet.
         val parsed = if (wallet != unknownWallet && !raw.txnId.all(Char::isDigit)) raw.copy(txnId = "$wallet:${raw.txnId}") else raw
         val occurredAt = parsed.occurredAt ?: sms.date

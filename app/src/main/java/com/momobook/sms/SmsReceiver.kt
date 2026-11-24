@@ -12,7 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
-/** Journals MTN MoMo and Airtel Money SMS the moment they arrive, before anyone has a chance to delete them. */
+/** Journals MTN MoMo, Airtel Money and Centenary Bank SMS the moment they arrive, before anyone has a chance to delete them. */
 class SmsReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
@@ -29,7 +29,7 @@ class SmsReceiver : BroadcastReceiver() {
                     simId = simId,
                 )
             }
-            .filter { it.body.contains("UGX", ignoreCase = true) && MomoParser.isMomoSender(it.address) }
+            .filter { MomoParser.accepts(it.address, it.body) }
         if (messages.isEmpty()) return
 
         val pending = goAsync()

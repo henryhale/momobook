@@ -8,7 +8,7 @@ import kotlin.math.roundToLong
 data class WithdrawRequest(val agent: String, val amount: Long, val fee: Long, val txnId: String)
 
 /**
- * Parses MTN Uganda Mobile Money and Airtel Money Uganda SMS.
+ * Parses MTN Uganda Mobile Money, Airtel Money Uganda and Centenary Bank account SMS.
  *
  * Every known template has its own pattern. A lenient fallback only accepts messages that carry
  * an amount, a transaction ID and a clear direction. Pending approvals, withdrawal requests,
@@ -25,14 +25,23 @@ object MomoParser {
     /** Only MTN MoMo and Airtel Money senders are journaled (anything else would corrupt the balance). */
     private val MTN_SENDER = Regex("""mtn|momo|mobile\s*money|mobmoney""", RegexOption.IGNORE_CASE)
     private val AIRTEL_SENDER = Regex("""airtel""", RegexOption.IGNORE_CASE)
+    private val CENTENARY_SENDER = Regex("""cente""", RegexOption.IGNORE_CASE)
+
+    /** Centenary alerts sign every message, so they're recognised even if the bank uses a numeric sender. */
+    private val CENTENARY_BODY = Regex("""^\s*CENTENARY\s*:\s*Dear\b""", RegexOption.IGNORE_CASE)
 
     fun isMomoSender(address: String?): Boolean =
         address == null || address == "Pasted" || senderProvider(address) != null
+
+    /** Whether an SMS from [address] with [body] may be journaled. */
+    fun accepts(address: String?, body: String): Boolean =
+        isMomoSender(address) || CENTENARY_BODY.containsMatchIn(body)
 
     /** Provider named by the SMS sender, or null when unknown (pasted text). Airtel is checked first. */
     fun senderProvider(address: String?): Provider? = when {
         address == null -> null
         AIRTEL_SENDER.containsMatchIn(address) -> Provider.AIRTEL
+        CENTENARY_SENDER.containsMatchIn(address) -> Provider.CENTENARY
         MTN_SENDER.containsMatchIn(address) -> Provider.MTN
         else -> null
     }
@@ -174,6 +183,18 @@ object MomoParser {
             """\.?\s*(?:Tax:?\s*$OCUR$AMT\.?\s*)?$ABAL(?:\.?\s*$ADATE)?"""
     )
 
+    // ---- Centenary Bank ----
+    // CENTENARY: Dear NAME, a trxn of -50,000 on your A/C **260 on 27-09-2026 at 12:15. Bal:962,633
+    // (ATM WITHDRAWAL VISA /Ebanking). Call 0800200555.   (a minus sign means money out)
+    private val C_TXN = rx(
+        """^CENTENARY\s*:\s*Dear\s+[^,]*,\s*a\s+tr(?:a)?xn\s+of\s+(-?)\s*$OCUR$AMT\s+on\s+your\s+A/?C\s*\**\s*(\d+)""" +
+            """\s+on\s+(\d{1,2}-\d{1,2}-\d{4})(?:\s+at\s+(\d{1,2}:\d{2}))?\.?\s*Bal(?:ance)?\s*:?\s*$OCUR(-?[\d,]+(?:\.\d{1,2})?)""" +
+            // The description is in brackets; the closing one is often missing, so it also ends at "Call …" or the end.
+            """(?:\s*\(\s*([^)]*?)\s*(?:\)|\.?\s*\bCall\b|$))?"""
+    )
+    private val C_ATM = rx("""\bATM\b|WITHDRAWAL""")
+    private val C_NARRATION_PREFIX = rx("""^(?:EFT|RTGS|TRF|TRANSFER)(?:[\s-]*(?:ORDER|IN|OUT|FROM|TO))?[\s:-]+""")
+
     // ---- Lenient fallback pieces ----
     private val G_AMOUNT = rx("""UGX\s*(?:UGX\s*)*$AMT""")
     private val G_FEE = rx("""fee(?:\s+of)?\s*(?:is)?:?\s*$OCUR$AMT""")
@@ -188,12 +209,15 @@ object MomoParser {
      */
     fun parse(body: String, address: String? = null): ParsedTxn? {
         val t = normalize(body)
-        if (!t.contains("UGX", ignoreCase = true)) return null
         if (NOT_A_TXN.containsMatchIn(t)) return null
-        return when (senderProvider(address)) {
+        val provider = senderProvider(address)
+        // Bank alerts carry no "UGX" and no transaction ID, so they have their own strict template only.
+        if (provider == Provider.CENTENARY || CENTENARY_BODY.containsMatchIn(t)) return centenary(t)
+        if (!t.contains("UGX", ignoreCase = true)) return null
+        return when (provider) {
             Provider.MTN -> mtn(t) ?: generic(t, Provider.MTN)
             Provider.AIRTEL -> airtel(t) ?: generic(t, Provider.AIRTEL)
-            null -> mtn(t) ?: airtel(t) ?: generic(t, if (AIRTEL_HINT.containsMatchIn(t)) Provider.AIRTEL else Provider.MTN)
+            else -> mtn(t) ?: airtel(t) ?: generic(t, if (AIRTEL_HINT.containsMatchIn(t)) Provider.AIRTEL else Provider.MTN)
         }
     }
 
@@ -315,6 +339,29 @@ object MomoParser {
             at = airtelDate(date))
     }
 
+    private fun centenary(t: String) = C_TXN.find(t)?.destructured?.let { (sign, amt, acct, day, time, bal, narr) ->
+        val out = sign == "-"
+        val narration = clean(narr)
+        val atm = C_ATM.containsMatchIn(narration)
+        val kind = when {
+            out && atm -> Kind.WITHDRAW
+            out -> Kind.PAYMENT
+            else -> Kind.RECEIVED
+        }
+        // "EFT-ORDER ACME LIMITED/Head Office" -> "ACME LIMITED" (the part after "/" is the branch or channel).
+        val party = when {
+            atm -> "Centenary ATM"
+            else -> C_NARRATION_PREFIX.replace(narration.substringBeforeLast('/').ifBlank { narration }, "")
+                .ifBlank { "Centenary Bank" }
+        }
+        val amount = money(amt)
+        // No transaction ID: account + time + signed amount + resulting balance is unique and stable across re-scans.
+        val id = "CB-$acct-" + (day + time).filter(Char::isDigit) + "-$sign$amount-" + bal.filter { it.isDigit() || it == '-' }
+        txn(id, if (out) Direction.DR else Direction.CR, kind, amount, 0, money(bal), party,
+            reason = narration.ifBlank { null }, at = centenaryDate(day, time))
+            .copy(provider = Provider.CENTENARY, account = acct)
+    }
+
     private fun generic(t: String, provider: Provider): ParsedTxn? {
         val id = G_ID.find(t)?.groupValues?.get(1) ?: return null
         val amount = G_AMOUNT.find(t)?.groupValues?.get(1)?.let(::money) ?: return null
@@ -350,6 +397,12 @@ object MomoParser {
         }
         return null
     }
+
+    /** "29-09-2026" + "12:18" (Centenary). */
+    private fun centenaryDate(day: String, time: String): Long? = runCatching {
+        val p = if (time.isBlank()) "dd-MM-yyyy" else "dd-MM-yyyy HH:mm"
+        SimpleDateFormat(p, Locale.US).apply { isLenient = false }.parse("$day $time".trim())!!.time
+    }.getOrNull()
 
     private fun parseDate(s: String): Long? {
         val norm = s.replace('T', ' ')

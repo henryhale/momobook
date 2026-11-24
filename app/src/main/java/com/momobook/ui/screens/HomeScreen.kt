@@ -186,7 +186,7 @@ private fun BalanceHero(
                 Box(Modifier.size(8.dp).clip(CircleShape).background(Brand.Yellow))
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    if (walletBalances.size > 1) "Mobile Money · all wallets" else "Mobile Money balance",
+                    if (walletBalances.size > 1) "All wallets" else "Balance",
                     Modifier.weight(1f), style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = .75f),
                     maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 )

@@ -46,14 +46,19 @@ class MainViewModel(private val app: Application) : AndroidViewModel(app) {
         if (w == null) es else es.filter { it.wallet == w }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    /** Known wallets in a stable order: MTN first, then Airtel. Labelled "MTN", or "MTN SIM 1", "MTN SIM 2" with two SIMs. */
+    /**
+     * Known wallets in a stable order: MTN, Airtel, then bank accounts. Labelled "MTN", or "MTN SIM 1",
+     * "MTN SIM 2" with two SIMs; bank accounts by their last digits ("Centenary ••260").
+     */
     val wallets: StateFlow<List<Wallet>> = Ledger.entries.map { es ->
         val keys = es.map { it.wallet }.filter { it.isNotEmpty() }.distinct()
+        val banks = keys.filter { Provider.ofWallet(it) == Provider.CENTENARY }.sorted()
+            .map { Wallet(it, Provider.accountOfWallet(it)?.let { a -> "Centenary ••$a" } ?: "Centenary") }
         listOf(Provider.MTN to "MTN", Provider.AIRTEL to "Airtel").flatMap { (provider, name) ->
             val ks = keys.filter { Provider.ofWallet(it) == provider }
                 .sortedBy { Provider.simOfWallet(it)?.toLongOrNull() ?: Long.MAX_VALUE }
             ks.mapIndexed { i, key -> Wallet(key, if (ks.size > 1) "$name SIM ${i + 1}" else name) }
-        }
+        } + banks
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val loaded: StateFlow<Boolean> = Ledger.loaded

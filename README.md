@@ -12,19 +12,19 @@
   <a href="LICENSE"><img src="https://img.shields.io/github/license/momobasehq/momobook" alt="License: Apache 2.0"></a>
 </p>
 
-<p align="center">Turn your MTN MoMo and Airtel Money SMS into a private, offline finance journal.</p>
+<p align="center">Turn your MTN MoMo, Airtel Money and Centenary Bank SMS into a private, offline finance journal.</p>
 
 ## Overview
 
 Mobile Money is how many people in Uganda get paid and pay for things, but the only record of it is a stream of SMS messages. Those messages are hard to read back, easy to delete, and say nothing about where your money actually goes.
 
-MoMoBook reads your MTN MoMo and Airtel Money messages and turns them into a proper money journal:
+MoMoBook reads your MTN MoMo, Airtel Money and Centenary Bank messages and turns them into a proper money journal:
 
 - **Automatic journal:** deposits, payments, transfers, withdrawals, airtime, bundles and fees are recorded as debit/credit entries the moment an SMS arrives.
 - **History that lasts:** every message is copied into the journal, so your records stay even if the SMS is deleted.
 - **Insights:** spending by category, top payees, top sources and agents, cash flow, fees and balance trends, by range or by month.
 - **Calendar:** income and expenses for each day, with a tap-through summary of that day.
-- **MTN and Airtel, dual SIM:** each wallet (per network and SIM) is tracked separately, with a combined view.
+- **MTN, Airtel and Centenary, dual SIM:** each wallet (per network and SIM, or per bank account) is tracked separately, with a combined view.
 - **Private by design:** everything is stored on your phone. Nothing is uploaded, and balances are hidden until you choose to show them.
 
 ## Download
@@ -33,4 +33,4 @@ Get the latest APK from [Releases](https://github.com/momobasehq/momobook/releas
 
 ## License
 
-[Apache 2.0](LICENSE). MoMoBook is an independent project and is not affiliated with MTN or Airtel.
+[Apache 2.0](LICENSE). MoMoBook is an independent project and is not affiliated with MTN, Airtel or Centenary Bank.
