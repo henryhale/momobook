@@ -43,25 +43,28 @@ jobs:
             echo "keyPassword=$KEY_PASSWORD"
           } > keystore.properties
 
-      - name: Build debug + release, run tests
+      - name: Build debug + release APKs and release bundle, run tests
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug assembleRelease testDebugUnitTest \
+          ./gradlew assembleDebug assembleRelease bundleRelease testDebugUnitTest \
             -Dorg.gradle.java.home="$JAVA_HOME" \
             -PversionName="${{ steps.version.outputs.name }}" \
             -PversionCode="${{ github.run_number }}"
 
-      - name: Collect APKs
+      - name: Collect APKs and bundle
         run: |
           V="${{ steps.version.outputs.name }}"
           mkdir -p out
           cp app/build/outputs/apk/release/app-release.apk "out/MoMoBook-$V.apk"
           cp app/build/outputs/apk/debug/app-debug.apk "out/MoMoBook-$V-debug.apk"
+          cp app/build/outputs/bundle/release/app-release.aab "out/MoMoBook-$V.aab"
 
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          files: out/*.apk
+          files: |
+            out/*.apk
+            out/*.aab
           generate_release_notes: true
 
       - name: Remove signing key
