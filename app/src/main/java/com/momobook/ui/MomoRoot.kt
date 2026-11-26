@@ -25,6 +25,8 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.momobook.data.Entry
+import com.momobook.security.AppLock
+import com.momobook.security.findFragmentActivity
 import com.momobook.sms.SmsInbox
 import com.momobook.ui.components.BalancePrivacy
 import com.momobook.ui.components.LocalBalancePrivacy
@@ -51,6 +53,9 @@ fun MomoRoot(vm: MainViewModel = viewModel()) {
     val balancesHidden by vm.balancesHidden.collectAsStateWithLifecycle()
     val themeMode by vm.theme.collectAsStateWithLifecycle()
     val hideOnLaunch by vm.hideOnLaunch.collectAsStateWithLifecycle()
+    val appLock by vm.appLock.collectAsStateWithLifecycle()
+    val lockGrace by vm.lockGrace.collectAsStateWithLifecycle()
+    val allowScreenshots by vm.allowScreenshots.collectAsStateWithLifecycle()
     val loaded by vm.loaded.collectAsStateWithLifecycle()
     val syncing by vm.syncing.collectAsStateWithLifecycle()
 
@@ -145,6 +150,21 @@ fun MomoRoot(vm: MainViewModel = viewModel()) {
                     Tab.SETTINGS -> SettingsScreen(
                         theme = themeMode, onTheme = vm::setTheme,
                         hideOnLaunch = hideOnLaunch, onHideOnLaunch = vm::setHideOnLaunch,
+                        appLock = appLock,
+                        onAppLock = { on ->
+                            val activity = ctx.findFragmentActivity()
+                            // Only turn the lock on after a successful unlock, so nobody locks themselves out.
+                            if (!on) vm.setAppLock(false)
+                            else if (activity != null) AppLock.authenticate(activity, "Turn on app lock") { r ->
+                                when (r) {
+                                    AppLock.Result.Success -> vm.setAppLock(true)
+                                    AppLock.Result.Cancelled -> Unit
+                                    is AppLock.Result.Error -> vm.notify(r.message)
+                                }
+                            }
+                        },
+                        lockGrace = lockGrace, onLockGrace = vm::setLockGrace,
+                        allowScreenshots = allowScreenshots, onAllowScreenshots = vm::setAllowScreenshots,
                         entryCount = allEntries.size, walletCount = wallets.size, syncing = syncing,
                         onSync = { if (hasPerm) vm.sync() else requestPerm() },
                         onPaste = { showPaste = true },
