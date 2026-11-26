@@ -40,8 +40,8 @@ import com.momobook.security.AppLock
 import com.momobook.ui.components.MomoLogo
 
 private const val AUTHOR = "Henry Hale"
-private const val AUTHOR_SITE = "henryhale.github.io"
-private const val PRIVACY_URL = "https://henryhale.github.io/momobook/privacy.html"
+private const val AUTHOR_SITE = "henryhale.dev"
+private const val PRIVACY_URL = "https://henryhale.dev/momobook/privacy.html"
 
 private enum class Page(val title: String) {
     MAIN("Settings"), APPEARANCE("Appearance"), DATA("Your data"), PRIVACY("Privacy"), SECURITY("Security"), ABOUT("About"),
