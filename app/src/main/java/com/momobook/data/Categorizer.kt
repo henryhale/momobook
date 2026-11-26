@@ -28,7 +28,7 @@ object Categorizer {
         rx("URA", "REVENUE AUTHORITY", "KCCA", "GOVERNMENT", "MINISTRY", "NIRA", "URSB") to "Taxes & Govt",
         rx("AGENT", "WITHDRAW", "CASH OUT") to "Cash Withdrawal",
         rx("QUICK LOAN", "QUICKLOAN", "LOAN") to LOANS,
-        rx("BANK", "SACCO", "MOKASH", "XTRA", "YINVESTA", "SAVINGS") to "Bank & Savings",
+        rx("BANK", "SACCO", "MOKASH", "XTRA", "YINVESTA", "SAVINGS", "FIXED DEPOSIT") to "Bank & Savings",
         rx("SUPERMARKET", "FOODS", "RESTAURANT", "CAFE", "GLOVO", "JUMIA", "SHOPRITE", "CARREFOUR", "CAPITAL SHOPPERS", "MAJID", "BAKERY", "KFC", "CAFE JAVAS") to "Food & Shopping",
         rx("SAFEBODA", "UBER", "BOLT", "FUEL", "SHELL", "STABEX", "TOTALENERGIES", "TAXI", "BUS") to "Transport",
         rx("HOSPITAL", "CLINIC", "PHARMACY", "MEDICAL", "HEALTH") to "Health",
@@ -40,6 +40,7 @@ object Categorizer {
             p.kind == Kind.DEPOSIT -> CASH_DEPOSIT
             LOAN.containsMatchIn(p.counterparty) -> LOANS
             p.counterparty.contains("INTEREST", ignoreCase = true) -> "Interest"
+            p.counterparty.contains("SALARY", ignoreCase = true) -> "Salary"
             else -> INCOME
         }
         if (p.kind == Kind.WITHDRAW) return "Cash Withdrawal"

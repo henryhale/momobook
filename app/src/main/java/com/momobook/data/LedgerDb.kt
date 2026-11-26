@@ -1,6 +1,7 @@
 package com.momobook.data
 
 import android.content.ContentValues
+import android.database.DatabaseUtils
 import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
@@ -120,6 +121,18 @@ class LedgerDb(context: Context) : SQLiteOpenHelper(context, "momo_ledger.db", n
         val p = if (parsed.kind == Kind.WITHDRAW && parsed.fee == 0L) {
             parsed.copy(fee = requestedFee(db, parsed, occurredAt) ?: 0)
         } else parsed
+        // A bank may send a confirmation and a bare alert for the same transaction: keep the confirmation.
+        if (p.provider.isBank) {
+            val day = Analytics.startOfDay(occurredAt)
+            val same = "wallet = ? AND direction = ? AND amount = ? AND occurred_at >= ? AND occurred_at < ? AND txn_id "
+            val args = arrayOf(wallet, p.direction.name, p.amount.toString(), day.toString(), (day + Analytics.DAY).toString(),
+                "%${MomoParser.ALERT_PREFIX}%")
+            if (p.alert) {
+                if (DatabaseUtils.queryNumEntries(db, "entries", same + "NOT LIKE ?", args) > 0) return false
+            } else {
+                db.delete("entries", same + "LIKE ?", args)
+            }
+        }
         val cv = ContentValues().apply {
             put("txn_id", p.txnId)
             put("direction", p.direction.name)

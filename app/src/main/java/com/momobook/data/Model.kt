@@ -8,46 +8,47 @@ enum class Direction { DR, CR }
 
 enum class Kind { RECEIVED, DEPOSIT, PAYMENT, SENT, WITHDRAW, OTHER }
 
-/** Mobile money network. Each provider keeps its own wallet (and balance) per SIM. */
-enum class Provider {
-    MTN, AIRTEL,
-
-    /** Centenary Bank account alerts. The wallet is the bank account, whichever SIM the SMS arrives on. */
-    CENTENARY;
+/**
+ * Mobile money network or bank. Mobile money keeps a wallet per SIM; a bank's wallet is the account,
+ * whichever SIM the SMS arrives on.
+ */
+enum class Provider(val label: String, private val prefix: String, val isBank: Boolean) {
+    MTN("MTN", "", false),
+    AIRTEL("Airtel", "airtel", false),
+    CENTENARY("Centenary", "centenary", true),
+    DTB("DTB", "dtb", true),
+    STANBIC("Stanbic", "stanbic", true);
 
     companion object {
-        private const val AIRTEL_KEY = "airtel"
-        private const val CENTENARY_KEY = "centenary"
-
         /**
          * Wallet key: the SIM subscription id for MTN (kept for existing data), "airtel[:sim]" for Airtel,
-         * "centenary[:account digits]" for Centenary.
+         * "<bank>[:account digits]" for banks (e.g. "centenary:260").
          */
-        fun walletKey(provider: Provider, simId: String?, account: String? = null): String = when (provider) {
-            MTN -> simId.orEmpty()
-            AIRTEL -> if (simId.isNullOrEmpty()) AIRTEL_KEY else "$AIRTEL_KEY:$simId"
-            CENTENARY -> if (account.isNullOrEmpty()) CENTENARY_KEY else "$CENTENARY_KEY:$account"
+        fun walletKey(provider: Provider, simId: String?, account: String? = null): String = when {
+            provider == MTN -> simId.orEmpty()
+            provider.isBank -> if (account.isNullOrEmpty()) provider.prefix else "${provider.prefix}:$account"
+            else -> if (simId.isNullOrEmpty()) provider.prefix else "${provider.prefix}:$simId"
         }
 
         /** Key used when the SIM is unknown (pasted messages). Bank wallets don't depend on the SIM. */
         fun unknownWallet(p: ParsedTxn) = walletKey(p.provider, null, p.account)
 
-        fun ofWallet(key: String): Provider = when {
-            key == AIRTEL_KEY || key.startsWith("$AIRTEL_KEY:") -> AIRTEL
-            key == CENTENARY_KEY || key.startsWith("$CENTENARY_KEY:") -> CENTENARY
-            else -> MTN
-        }
+        fun ofWallet(key: String): Provider =
+            entries.firstOrNull { it != MTN && (key == it.prefix || key.startsWith("${it.prefix}:")) } ?: MTN
 
         /** SIM subscription id behind a wallet key; null for unknown SIMs and bank accounts. */
-        fun simOfWallet(key: String): String? = when (ofWallet(key)) {
-            MTN -> key.ifEmpty { null }
-            AIRTEL -> key.substringAfter(':', "").ifEmpty { null }
-            CENTENARY -> null
+        fun simOfWallet(key: String): String? {
+            val p = ofWallet(key)
+            return when {
+                p == MTN -> key.ifEmpty { null }
+                p.isBank -> null
+                else -> key.substringAfter(':', "").ifEmpty { null }
+            }
         }
 
         /** Account digits of a bank wallet key ("centenary:260" -> "260"). */
         fun accountOfWallet(key: String): String? =
-            if (ofWallet(key) == CENTENARY) key.substringAfter(':', "").ifEmpty { null } else null
+            if (ofWallet(key).isBank) key.substringAfter(':', "").ifEmpty { null } else null
     }
 }
 
@@ -66,6 +67,11 @@ data class ParsedTxn(
     val provider: Provider = Provider.MTN,
     /** Bank account digits shown in the SMS (e.g. "260" from "A/C **260"). */
     val account: String? = null,
+    /**
+     * A bare bank alert (no reference, no time) that may repeat a confirmation SMS for the same
+     * transaction. The journal drops it when a matching confirmed entry exists.
+     */
+    val alert: Boolean = false,
 )
 
 /** Where a parsed transaction came from. smsId is null for pasted / just-received messages. */

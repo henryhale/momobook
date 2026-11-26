@@ -50,12 +50,15 @@ class MainViewModel(private val app: Application) : AndroidViewModel(app) {
 
     /**
      * Known wallets in a stable order: MTN, Airtel, then bank accounts. Labelled "MTN", or "MTN SIM 1",
-     * "MTN SIM 2" with two SIMs; bank accounts by their last digits ("Centenary ••260").
+     * "MTN SIM 2" with two SIMs; bank accounts by their last digits ("Centenary ••260", "Stanbic ••1234").
      */
     val wallets: StateFlow<List<Wallet>> = Ledger.entries.map { es ->
         val keys = es.map { it.wallet }.filter { it.isNotEmpty() }.distinct()
-        val banks = keys.filter { Provider.ofWallet(it) == Provider.CENTENARY }.sorted()
-            .map { Wallet(it, Provider.accountOfWallet(it)?.let { a -> "Centenary ••$a" } ?: "Centenary") }
+        val banks = keys.filter { Provider.ofWallet(it).isBank }.sortedWith(compareBy({ Provider.ofWallet(it).ordinal }, { it }))
+            .map { k ->
+                val bank = Provider.ofWallet(k).label
+                Wallet(k, Provider.accountOfWallet(k)?.let { a -> "$bank ••$a" } ?: bank)
+            }
         listOf(Provider.MTN to "MTN", Provider.AIRTEL to "Airtel").flatMap { (provider, name) ->
             val ks = keys.filter { Provider.ofWallet(it) == provider }
                 .sortedBy { Provider.simOfWallet(it)?.toLongOrNull() ?: Long.MAX_VALUE }
@@ -119,7 +122,7 @@ class MainViewModel(private val app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Adds a message pasted by the user. Returns false when it isn't a recognised MoMo SMS. */
+    /** Adds a message pasted by the user. Returns false when it isn't a recognised mobile money or bank SMS. */
     fun importPasted(text: String): Boolean {
         if (MomoParser.parse(text) == null) return false
         viewModelScope.launch {

@@ -8,7 +8,7 @@ import kotlin.math.roundToLong
 data class WithdrawRequest(val agent: String, val amount: Long, val fee: Long, val txnId: String)
 
 /**
- * Parses MTN Uganda Mobile Money, Airtel Money Uganda and Centenary Bank account SMS.
+ * Parses mobile money and bank SMS.
  *
  * Every known template has its own pattern. A lenient fallback only accepts messages that carry
  * an amount, a transaction ID and a clear direction. Pending approvals, withdrawal requests,
@@ -26,6 +26,8 @@ object MomoParser {
     private val MTN_SENDER = Regex("""mtn|momo|mobile\s*money|mobmoney""", RegexOption.IGNORE_CASE)
     private val AIRTEL_SENDER = Regex("""airtel""", RegexOption.IGNORE_CASE)
     private val CENTENARY_SENDER = Regex("""cente""", RegexOption.IGNORE_CASE)
+    private val DTB_SENDER = Regex("""\bdtb|diamond\s*trust""", RegexOption.IGNORE_CASE)
+    private val STANBIC_SENDER = Regex("""stanbic""", RegexOption.IGNORE_CASE)
 
     /** Centenary alerts sign every message, so they're recognised even if the bank uses a numeric sender. */
     private val CENTENARY_BODY = Regex("""^\s*CENTENARY\s*:\s*Dear\b""", RegexOption.IGNORE_CASE)
@@ -33,15 +35,31 @@ object MomoParser {
     fun isMomoSender(address: String?): Boolean =
         address == null || address == "Pasted" || senderProvider(address) != null
 
+    /** Stanbic signs every alert with "Stanbic:". */
+    private val STANBIC_BODY = Regex("""^\s*Stanbic\s*:""", RegexOption.IGNORE_CASE)
+
+    /** DTB messages that name the bank ("Ref: DTB…", "call DTB"), for when it uses a numeric sender. */
+    private val DTB_BODY = Regex("""Ref\s*:?\s*DTB\d|\bcall\s+DTB\b""", RegexOption.IGNORE_CASE)
+
     /** Whether an SMS from [address] with [body] may be journaled. */
     fun accepts(address: String?, body: String): Boolean =
-        isMomoSender(address) || CENTENARY_BODY.containsMatchIn(body)
+        isMomoSender(address) || bodyProvider(body) != null
+
+    /** Bank named by the message itself, for senders we don't recognise. */
+    private fun bodyProvider(body: String): Provider? = when {
+        CENTENARY_BODY.containsMatchIn(body) -> Provider.CENTENARY
+        STANBIC_BODY.containsMatchIn(body) -> Provider.STANBIC
+        DTB_BODY.containsMatchIn(body) -> Provider.DTB
+        else -> null
+    }
 
     /** Provider named by the SMS sender, or null when unknown (pasted text). Airtel is checked first. */
     fun senderProvider(address: String?): Provider? = when {
         address == null -> null
         AIRTEL_SENDER.containsMatchIn(address) -> Provider.AIRTEL
         CENTENARY_SENDER.containsMatchIn(address) -> Provider.CENTENARY
+        STANBIC_SENDER.containsMatchIn(address) -> Provider.STANBIC
+        DTB_SENDER.containsMatchIn(address) -> Provider.DTB
         MTN_SENDER.containsMatchIn(address) -> Provider.MTN
         else -> null
     }
@@ -195,6 +213,40 @@ object MomoParser {
     private val C_ATM = rx("""\bATM\b|WITHDRAWAL""")
     private val C_NARRATION_PREFIX = rx("""^(?:EFT|RTGS|TRF|TRANSFER)(?:[\s-]*(?:ORDER|IN|OUT|FROM|TO))?[\s:-]+""")
 
+    // ---- DTB (Diamond Trust Bank) ----
+    private const val SDATE = """(\d{1,2}/\d{1,2}/\d{2,4})"""
+    private const val REF = """([A-Z0-9]{4,})"""
+
+    // Confirmed. You have transferred UGX 150,000 from A/C 012456 to A/C 098321 (Ref: DTB12345678) on 26/11/2026 at 20:55.
+    private val D_TRANSFER = rx(
+        """You\s+have\s+transferred\s+$CUR$AMT\s+from\s+A/?C\s*([\d*]+)\s+to\s+(.+?)\s*\(\s*Ref\s*:?\s*$REF\s*\)""" +
+            """(?:\s*on\s+$SDATE(?:\s+at\s+(\d{1,2}:\d{2}))?)?"""
+    )
+
+    // Your Fixed Deposit of UGX 2,000,000 has been booked. Ref: FD98765432.
+    private val D_FIXED_DEPOSIT = rx(
+        """Fixed\s+Deposit\s+of\s+$CUR$AMT\s+has\s+been\s+booked\.?(?:\s*Ref\s*:?\s*$REF)?"""
+    )
+
+    // Alert: Debit of UGX 50,000 on A/C 012***456 on 26/11/2026. If unauthorized, call DTB immediately.
+    private val D_ALERT = rx(
+        """Alert\s*:\s*(Debit|Credit)\s+of\s+$CUR$AMT\s+on\s+A/?C\s*([\d*]+)\s+on\s+$SDATE(?:\s+at\s+(\d{1,2}:\d{2}))?"""
+    )
+
+    // ---- Stanbic Bank ----
+    // Stanbic: Debit of UGX 85,000 from Acct **1234 at POS/Card **5678 (CITY SUPERMARKET) on 26/11/26 19:42.
+    // Avail Bal: UGX 1,415,000. Ref: TXN984712.
+    // Stanbic: Credit of UGX 500,000 to Acct **1234 (SALARY/TRANSFER IN) on 26/11/26 09:15. Avail Bal: … Ref: …
+    // Stanbic: Debit of UGX 120,000 from Acct **1234 to 25677XXXXXXX on 26/11/26 14:05. Avail Bal: … Ref: …
+    private val S_TXN = rx(
+        """^Stanbic\s*:\s*(Debit|Credit)\s+of\s+$CUR$AMT\s+(?:from|to)\s+A(?:cct|/?C)\s*\**\s*(\d+)\s*(.*?)""" +
+            """\s+on\s+$SDATE(?:\s+(?:at\s+)?(\d{1,2}:\d{2}))?\.?\s*(?:Avail(?:able)?\.?\s+)?Bal(?:ance)?\s*:?\s*$OCUR$AMT""" +
+            """(?:\.?\s*Ref\s*:?\s*$REF)?"""
+    )
+    private val S_BRACKET = Regex("""\(([^)]*)\)""")
+    private val S_TO = rx("""^to\s+(\S+)""")
+    private val S_CARD = rx("""\bPOS\b|\bCard\b""")
+
     // ---- Lenient fallback pieces ----
     private val G_AMOUNT = rx("""UGX\s*(?:UGX\s*)*$AMT""")
     private val G_FEE = rx("""fee(?:\s+of)?\s*(?:is)?:?\s*$OCUR$AMT""")
@@ -212,12 +264,20 @@ object MomoParser {
         if (NOT_A_TXN.containsMatchIn(t)) return null
         val provider = senderProvider(address)
         // Bank alerts carry no "UGX" and no transaction ID, so they have their own strict template only.
-        if (provider == Provider.CENTENARY || CENTENARY_BODY.containsMatchIn(t)) return centenary(t)
+        // Banks: strict templates only, no lenient fallback.
+        when (provider ?: bodyProvider(t)) {
+            Provider.CENTENARY -> return centenary(t)
+            Provider.STANBIC -> return stanbic(t)
+            Provider.DTB -> return dtb(t)
+            else -> Unit
+        }
         if (!t.contains("UGX", ignoreCase = true)) return null
         return when (provider) {
             Provider.MTN -> mtn(t) ?: generic(t, Provider.MTN)
             Provider.AIRTEL -> airtel(t) ?: generic(t, Provider.AIRTEL)
-            else -> mtn(t) ?: airtel(t) ?: generic(t, if (AIRTEL_HINT.containsMatchIn(t)) Provider.AIRTEL else Provider.MTN)
+            // Pasted text: DTB's fixed-deposit and alert SMS don't name the bank, so try its templates too.
+            else -> mtn(t) ?: airtel(t) ?: dtb(t)
+                ?: generic(t, if (AIRTEL_HINT.containsMatchIn(t)) Provider.AIRTEL else Provider.MTN)
         }
     }
 
@@ -362,6 +422,58 @@ object MomoParser {
             .copy(provider = Provider.CENTENARY, account = acct)
     }
 
+    private fun dtb(t: String) = (dTransfer(t) ?: dFixedDeposit(t) ?: dAlert(t))?.let { p ->
+        p.copy(provider = Provider.DTB)
+    }
+
+    private fun dTransfer(t: String) = D_TRANSFER.find(t)?.destructured?.let { (amt, from, to, ref, day, time) ->
+        txn(ref, Direction.DR, Kind.SENT, money(amt), 0, null, to, at = slashDate(day, time))
+            .copy(account = acctTail(from, 3))
+    }
+
+    private fun dFixedDeposit(t: String) = D_FIXED_DEPOSIT.find(t)?.destructured?.let { (amt, ref) ->
+        val amount = money(amt)
+        // The SMS names no account, so it gets the bank's catch-all wallet.
+        txn(ref.ifBlank { "FD-$amount" }, Direction.DR, Kind.SENT, amount, 0, null, "Fixed Deposit", reason = "Fixed deposit booked")
+    }
+
+    private fun dAlert(t: String) = D_ALERT.find(t)?.destructured?.let { (dir, amt, acct, day, time) ->
+        val out = dir.equals("Debit", ignoreCase = true)
+        val amount = money(amt)
+        val account = acctTail(acct, 3)
+        // No reference: account + date + signed amount. Two same-amount alerts on one day are indistinguishable.
+        val id = "$ALERT_PREFIX$account-" + (day + time).filter(Char::isDigit) + "-" + (if (out) "D" else "C") + amount
+        txn(id, if (out) Direction.DR else Direction.CR, if (out) Kind.PAYMENT else Kind.RECEIVED, amount, 0, null,
+            if (out) "DTB debit" else "DTB credit", at = slashDate(day, time))
+            .copy(account = account, alert = true)
+    }
+
+    private fun stanbic(t: String) = S_TXN.find(t)?.destructured?.let { (dir, amt, acct, detail, day, time, bal, ref) ->
+        val out = dir.equals("Debit", ignoreCase = true)
+        val amount = money(amt)
+        val bracket = S_BRACKET.find(detail)?.groupValues?.get(1)?.let(::clean).orEmpty()
+        val to = S_TO.find(detail.trim())?.groupValues?.get(1)?.let(::clean).orEmpty()
+        val kind = when {
+            !out -> Kind.RECEIVED
+            C_ATM.containsMatchIn(detail) -> Kind.WITHDRAW
+            S_CARD.containsMatchIn(detail) -> Kind.PAYMENT
+            to.isNotEmpty() -> Kind.SENT
+            else -> Kind.PAYMENT
+        }
+        val party = bracket.ifBlank { to }.ifBlank { if (out) "Stanbic debit" else "Stanbic credit" }
+        val phone = G_PHONE.find(to)?.groupValues?.get(1)
+        val id = ref.ifBlank { "SB-$acct-" + (day + time).filter(Char::isDigit) + "-${dir.first()}$amount-" + bal.filter(Char::isDigit) }
+        txn(id, if (out) Direction.DR else Direction.CR, kind, amount, 0, money(bal), party, phone = phone,
+            reason = clean(detail).ifBlank { null }, at = slashDate(day, time))
+            .copy(provider = Provider.STANBIC, account = acct)
+    }
+
+    /** DTB shows the full number in confirmations and masks it in alerts ("012***456"): key by the last digits. */
+    private fun acctTail(s: String, n: Int) = s.filter(Char::isDigit).takeLast(n)
+
+    /** Prefix of [ParsedTxn.alert] transaction IDs. */
+    const val ALERT_PREFIX = "ALERT-"
+
     private fun generic(t: String, provider: Provider): ParsedTxn? {
         val id = G_ID.find(t)?.groupValues?.get(1) ?: return null
         val amount = G_AMOUNT.find(t)?.groupValues?.get(1)?.let(::money) ?: return null
@@ -403,6 +515,14 @@ object MomoParser {
         val p = if (time.isBlank()) "dd-MM-yyyy" else "dd-MM-yyyy HH:mm"
         SimpleDateFormat(p, Locale.US).apply { isLenient = false }.parse("$day $time".trim())!!.time
     }.getOrNull()
+
+    /** "26/11/2026" or "26/11/26", optionally with "20:55" (DTB, Stanbic). */
+    private fun slashDate(day: String, time: String): Long? {
+        if (day.isBlank()) return null
+        val year = if (day.substringAfterLast('/').length == 2) "yy" else "yyyy"
+        val p = if (time.isBlank()) "dd/MM/$year" else "dd/MM/$year HH:mm"
+        return runCatching { SimpleDateFormat(p, Locale.US).apply { isLenient = false }.parse("$day $time".trim())!!.time }.getOrNull()
+    }
 
     private fun parseDate(s: String): Long? {
         val norm = s.replace('T', ' ')
