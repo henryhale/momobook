@@ -40,7 +40,13 @@ fun DayScreen(
     val ins = remember(entries, w) { Analytics.compute(entries, w) }
     // Balance at the end of the day: each wallet's last balance on or before this day.
     val closing = remember(entries, w) { Analytics.latestBalances(entries.filter { it.occurredAt < w.to }).values.sumOf { it.balance!! } }
-    val title = remember(day) { SimpleDateFormat("EEEE, d MMMM yyyy", Locale.getDefault()).format(day) }
+    val title = remember(day) { SimpleDateFormat("EEE, d MMM yyyy", Locale.getDefault()).format(day) }
+    val subtitle = remember(day, today, dayEntries.size) {
+        val rel = when (day) { today -> "Today"; Analytics.addDays(today, -1) -> "Yesterday"; else -> null }
+        val n = dayEntries.size
+        val count = when (n) { 0 -> "no transactions"; 1 -> "1 transaction"; else -> "$n transactions" }
+        if (rel != null) "$rel · $count" else count.replaceFirstChar { it.uppercase() }
+    }
 
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -51,8 +57,8 @@ fun DayScreen(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back to calendar") }
                 Column(Modifier.weight(1f)) {
-                    Text(Fmt.dayHeader(day), style = MaterialTheme.typography.titleLarge)
-                    Text(title, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(title, style = MaterialTheme.typography.titleLarge)
+                    Text(subtitle, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 IconButton(onClick = { onDay(Analytics.addDays(day, -1)) }) { Icon(Icons.Rounded.ChevronLeft, "Previous day") }
                 IconButton(onClick = { onDay(Analytics.addDays(day, 1)) }, enabled = day < today) {
