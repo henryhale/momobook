@@ -33,12 +33,12 @@ fun OnboardingScreen(onGrant: () -> Unit, onSkip: () -> Unit) {
             Text("MomoBook", style = MaterialTheme.typography.headlineMedium, color = Color.White)
             Spacer(Modifier.height(8.dp))
             Text(
-                "Your Mobile Money, journaled automatically.\nSee where every shilling goes.",
+                "Your mobile money and bank SMS, journaled automatically.\nSee where every shilling goes.",
                 style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = .72f),
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(36.dp))
-            Feature(Icons.Rounded.Sms, "Reads your MoMo SMS", "Deposits, payments and fees are picked up automatically.")
+            Feature(Icons.Rounded.Sms, "Reads your mobile money and bank SMS", "Deposits, payments and fees are picked up automatically.")
             Feature(Icons.Rounded.Lock, "Stays on your phone", "Everything is stored locally. Nothing is uploaded.")
             Feature(Icons.Rounded.History, "Never lose history", "Each SMS is copied into your journal, even if you delete it later.")
             Spacer(Modifier.weight(1.2f))

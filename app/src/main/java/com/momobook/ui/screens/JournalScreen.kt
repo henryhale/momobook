@@ -128,7 +128,7 @@ fun JournalScreen(
                         EmptyState(
                             Icons.Rounded.SearchOff,
                             if (entries.isEmpty()) "Your journal is empty" else "No matching entries",
-                            if (entries.isEmpty()) "Pull down to scan your SMS inbox for MoMo messages." else "Try a different search or filter.",
+                            if (entries.isEmpty()) "Pull down to scan your SMS inbox for mobile money and bank SMS." else "Try a different search or filter.",
                         )
                     }
                 }

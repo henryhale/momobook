@@ -146,10 +146,10 @@ fun SettingsScreen(
         }
 
         SectionCard(title = "Your data", subtitle = "$entryCount journal entries · $walletCount wallet${if (walletCount == 1) "" else "s"}") {
-            ActionRow(Icons.Rounded.Sync, "Scan SMS inbox now", "Import new Mobile Money messages", onSync, trailing = {
+            ActionRow(Icons.Rounded.Sync, "Scan SMS inbox now", "Import new mobile money and bank SMS", onSync, trailing = {
                 if (syncing) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
             })
-            ActionRow(Icons.Rounded.ContentPaste, "Add from SMS text", "Paste a Mobile Money message", onPaste)
+            ActionRow(Icons.Rounded.ContentPaste, "Add from SMS text", "Paste a mobile money or bank SMS", onPaste)
             ActionRow(Icons.Rounded.IosShare, "Export journal", "Share all entries as a CSV spreadsheet", onExport)
         }
 
@@ -167,7 +167,7 @@ fun SettingsScreen(
             Text(
                 "Offline journal and money tracker, built from your messages. Deposits, spending, fees and insights, all on your " +
                     "phone. Each message is copied into the journal so your history stays even if the SMS is deleted.\n\n" +
-                    "Currently reads MTN MoMo, Airtel Money and Centenary Bank messages, with more to come.",
+                    "Currently reads mobile money and bank SMS from Uganda, with more to come.",
                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(12.dp))

@@ -34,6 +34,8 @@ MomoBook reads those messages on your phone and turns them into a proper money j
 | MTN Mobile Money | Mobile money |
 | Airtel Money | Mobile money |
 | Centenary Bank | Bank alerts |
+| DTB (Diamond Trust Bank) | Transfers, fixed deposits, alerts |
+| Stanbic Bank | Bank alerts |
 
 Message formats are currently those used in Uganda (UGX). More channels and countries are planned. To request one, [open an issue](https://github.com/henryhale/momobook/issues) with a few sample messages (remove any personal details first).
 
@@ -43,4 +45,4 @@ Get the latest APK from [Releases](https://github.com/henryhale/momobook/release
 
 ## License
 
-[Apache 2.0](LICENSE). MomoBook is an independent project and is not affiliated with MTN, Airtel or Centenary Bank.
+[Apache 2.0](LICENSE). MomoBook is an independent project and is not affiliated with any mobile network or bank.

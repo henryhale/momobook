@@ -25,7 +25,7 @@
             </intent-filter>
         </activity>
 
-        <!-- Captures new MoMo SMS the moment they arrive, so they are journaled even if deleted later. -->
+        <!-- Captures new mobile money and bank SMS the moment they arrive, so they are journaled even if deleted later. -->
         <receiver
             android:name=".sms.SmsReceiver"
             android:exported="true"

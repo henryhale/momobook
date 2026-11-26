@@ -22,7 +22,7 @@ fun PasteSmsDialog(onDismiss: () -> Unit, onSubmit: (String) -> Boolean) {
         text = {
             Column {
                 Text(
-                    "Paste a Mobile Money message. It will be parsed and saved to your journal.",
+                    "Paste a mobile money or bank SMS. It will be parsed and saved to your journal.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -34,7 +34,7 @@ fun PasteSmsDialog(onDismiss: () -> Unit, onSubmit: (String) -> Boolean) {
                     shape = RoundedCornerShape(16.dp),
                     placeholder = { Text("You have received UGX 80000 from …") },
                     isError = error,
-                    supportingText = if (error) {{ Text("That doesn't look like a mobile money transaction message.") }} else null,
+                    supportingText = if (error) {{ Text("That doesn't look like a mobile money or bank transaction SMS.") }} else null,
                 )
                 TextButton(onClick = { clipboard.getText()?.text?.let { text = it; error = false } }) {
                     Text("Paste from clipboard")

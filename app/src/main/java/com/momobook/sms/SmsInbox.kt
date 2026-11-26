@@ -16,7 +16,7 @@ object SmsInbox {
     fun hasPermission(ctx: Context) =
         ContextCompat.checkSelfPermission(ctx, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
 
-    /** Reads inbox SMS that mention UGX, plus Centenary alerts. The ledger keeps only MTN MoMo / Airtel Money / Centenary and real transactions. */
+    /** Reads inbox SMS that mention UGX, plus Centenary alerts. The ledger keeps only supported senders and real transactions. */
     fun scan(ctx: Context): List<SmsRef> {
         if (!hasPermission(ctx)) return emptyList()
         val cols = arrayOf(

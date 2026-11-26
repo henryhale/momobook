@@ -85,7 +85,7 @@ fun HomeScreen(
                         Icon(Icons.Rounded.Sms, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
                         Spacer(Modifier.width(12.dp))
                         Text(
-                            "Allow SMS access to import MoMo messages automatically",
+                            "Allow SMS access to import mobile money and bank SMS automatically",
                             Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                         )
@@ -122,7 +122,7 @@ fun HomeScreen(
                     if (entries.isEmpty()) {
                         EmptyState(
                             Icons.Rounded.Inbox, "No transactions yet",
-                            "Pull down to scan your SMS inbox, or paste a MoMo message.",
+                            "Pull down to scan your SMS inbox, or paste a mobile money or bank SMS.",
                         )
                     } else {
                         entries.take(8).forEach { EntryRow(it, onClick = { onOpen(it) }, showDate = true) }
@@ -209,7 +209,7 @@ private fun BalanceHero(
                 style = MaterialTheme.typography.displaySmall.merge(Tabular), color = Color.White,
             )
             Text(
-                latest?.let { "As of ${Fmt.relative(it.occurredAt)} · from your last MoMo SMS" } ?: "Waiting for your first MoMo SMS",
+                latest?.let { "As of ${Fmt.relative(it.occurredAt)} · from your latest SMS" } ?: "Waiting for your first transaction SMS",
                 style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = .55f),
             )
             if (walletBalances.size > 1) {

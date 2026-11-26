@@ -6,7 +6,7 @@ enum class ThemeMode(val label: String) { SYSTEM("System"), LIGHT("Light"), DARK
 
 /** How long the app may sit in the background before app lock asks again. */
 enum class LockGrace(val label: String, val millis: Long) {
-    IMMEDIATE("Instantly", 0), SEC_30("30 sec", 30_000), MIN_1("1 min", 60_000), MIN_5("5 min", 300_000),
+    IMMEDIATE("Instant", 0), SEC_30("30 sec", 30_000), MIN_1("1 min", 60_000), MIN_5("5 min", 300_000),
 }
 
 /** Small user settings, stored on the device. */
