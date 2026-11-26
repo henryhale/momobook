@@ -8,11 +8,13 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.momobook.data.Entry
 import com.momobook.data.Ledger
+import com.momobook.data.LockGrace
 import com.momobook.data.MomoParser
 import com.momobook.data.Prefs
 import com.momobook.data.Provider
 import com.momobook.data.ThemeMode
 import com.momobook.data.SmsRef
+import com.momobook.security.AppLock
 import com.momobook.sms.SmsInbox
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -73,6 +75,18 @@ class MainViewModel(private val app: Application) : AndroidViewModel(app) {
     val hideOnLaunch: StateFlow<Boolean> = _hideOnLaunch.asStateFlow()
     fun setHideOnLaunch(v: Boolean) { prefs.hideBalancesOnLaunch = v; _hideOnLaunch.value = v }
 
+    private val _appLock = MutableStateFlow(prefs.appLock)
+    val appLock: StateFlow<Boolean> = _appLock.asStateFlow()
+    fun setAppLock(v: Boolean) { prefs.appLock = v; _appLock.value = v; if (!v) AppLock.unlock() }
+
+    private val _lockGrace = MutableStateFlow(prefs.lockGrace)
+    val lockGrace: StateFlow<LockGrace> = _lockGrace.asStateFlow()
+    fun setLockGrace(g: LockGrace) { prefs.lockGrace = g; _lockGrace.value = g }
+
+    private val _allowScreenshots = MutableStateFlow(prefs.allowScreenshots)
+    val allowScreenshots: StateFlow<Boolean> = _allowScreenshots.asStateFlow()
+    fun setAllowScreenshots(v: Boolean) { prefs.allowScreenshots = v; _allowScreenshots.value = v }
+
     private val _balancesHidden = MutableStateFlow(prefs.hideBalancesOnLaunch)
     val balancesHidden: StateFlow<Boolean> = _balancesHidden.asStateFlow()
     fun toggleBalances() { _balancesHidden.value = !_balancesHidden.value }
@@ -82,6 +96,8 @@ class MainViewModel(private val app: Application) : AndroidViewModel(app) {
 
     private val _events = MutableSharedFlow<String>(extraBufferCapacity = 4)
     val events: SharedFlow<String> = _events
+
+    fun notify(message: String) { _events.tryEmit(message) }
 
     init {
         viewModelScope.launch { Ledger.reload() }
