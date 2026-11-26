@@ -38,3 +38,4 @@ sms-samples/
 
 *.log
 *.hprof
+docs/.vite/
