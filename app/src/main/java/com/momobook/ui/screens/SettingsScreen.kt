@@ -62,7 +62,7 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
-        SectionCard(title = "Appearance", subtitle = "Choose how MoMoBook looks") {
+        SectionCard(title = "Appearance", subtitle = "Choose how MomoBook looks") {
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                 ThemeMode.entries.forEachIndexed { i, m ->
                     SegmentedButton(
@@ -119,7 +119,7 @@ fun SettingsScreen(
                 MomoLogo(size = 56.dp)
                 Spacer(Modifier.width(14.dp))
                 Column {
-                    Text("MoMoBook", style = MaterialTheme.typography.titleMedium)
+                    Text("MomoBook", style = MaterialTheme.typography.titleMedium)
                     Text("Version $version", style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -132,7 +132,7 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(12.dp))
-            ActionRow(Icons.Rounded.Policy, "Privacy policy", "How MoMoBook handles your data", { openUrl(PRIVACY_URL) })
+            ActionRow(Icons.Rounded.Policy, "Privacy policy", "How MomoBook handles your data", { openUrl(PRIVACY_URL) })
             ActionRow(Icons.Rounded.Language, "Built by $AUTHOR", AUTHOR_SITE, { openUrl("https://$AUTHOR_SITE") })
         }
         Spacer(Modifier.height(8.dp))

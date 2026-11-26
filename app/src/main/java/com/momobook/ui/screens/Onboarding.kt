@@ -30,7 +30,7 @@ fun OnboardingScreen(onGrant: () -> Unit, onSkip: () -> Unit) {
             Spacer(Modifier.weight(1f))
             MomoLogo(size = 112.dp)
             Spacer(Modifier.height(28.dp))
-            Text("MoMoBook", style = MaterialTheme.typography.headlineMedium, color = Color.White)
+            Text("MomoBook", style = MaterialTheme.typography.headlineMedium, color = Color.White)
             Spacer(Modifier.height(8.dp))
             Text(
                 "Your Mobile Money, journaled automatically.\nSee where every shilling goes.",

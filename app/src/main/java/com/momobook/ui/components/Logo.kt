@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.momobook.ui.theme.Brand
 
-/** The MoMoBook mark, drawn from the same geometry as the launcher icon (logo.svg). */
+/** The MomoBook mark, drawn from the same geometry as the launcher icon (logo.svg). */
 @Composable
 fun MomoLogo(size: Dp = 40.dp, modifier: Modifier = Modifier, withBackground: Boolean = true) {
     Canvas(modifier.size(size)) {

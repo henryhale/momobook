@@ -67,7 +67,7 @@ fun HomeScreen(
                     MomoLogo(size = 36.dp)
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("MoMoBook", style = MaterialTheme.typography.titleLarge)
+                        Text("MomoBook", style = MaterialTheme.typography.titleLarge)
                         Text(
                             Fmt.month(System.currentTimeMillis()),
                             style = MaterialTheme.typography.labelMedium,

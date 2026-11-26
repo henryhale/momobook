@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "MoMoBook"
+rootProject.name = "MomoBook"
 include(":app")

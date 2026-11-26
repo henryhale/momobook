@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="logo.svg" width="96" alt="MoMoBook logo">
+  <img src="logo.svg" width="96" alt="MomoBook logo">
 </p>
 
-<h1 align="center">MoMoBook</h1>
+<h1 align="center">MomoBook</h1>
 
 <p align="center">
   <a href="https://github.com/henryhale/momobook/actions/workflows/release.yml"><img src="https://github.com/henryhale/momobook/actions/workflows/release.yml/badge.svg" alt="Release build"></a>
@@ -18,7 +18,7 @@
 
 For millions of people, mobile money and bank alerts are the main record of where their money goes, but that record is just a stream of SMS messages. They are hard to read back, easy to delete, and say nothing about your spending as a whole.
 
-MoMoBook reads those messages on your phone and turns them into a proper money journal:
+MomoBook reads those messages on your phone and turns them into a proper money journal:
 
 - **Automatic journal:** deposits, payments, transfers, withdrawals, airtime, bundles and fees are recorded as debit/credit entries the moment an SMS arrives.
 - **History that lasts:** every message is copied into the journal, so your records stay even if the SMS is deleted.
@@ -43,4 +43,4 @@ Get the latest APK from [Releases](https://github.com/henryhale/momobook/release
 
 ## License
 
-[Apache 2.0](LICENSE). MoMoBook is an independent project and is not affiliated with MTN, Airtel or Centenary Bank.
+[Apache 2.0](LICENSE). MomoBook is an independent project and is not affiliated with MTN, Airtel or Centenary Bank.
