@@ -87,19 +87,20 @@ fun InsightsScreen(entries: List<Entry>) {
         }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StatTile("Money in", Fmt.ugx(ins.totalIn), Icons.Rounded.SouthWest, mc.moneyIn, Modifier.weight(1f),
-                        caption = prev?.let { compareLabel(ins.totalIn, it.totalIn, prevName) })
-                    StatTile("Money out", Fmt.ugx(ins.totalOut), Icons.Rounded.NorthEast, mc.moneyOut, Modifier.weight(1f),
+                Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    StatTile("Money in", Fmt.ugx(ins.totalIn), Icons.Rounded.SouthWest, mc.moneyIn, Modifier.weight(1f).fillMaxHeight(),
+                        caption = prev?.let { compareLabel(ins.totalIn, it.totalIn, prevName) } ?: "received")
+                    StatTile("Money out", Fmt.ugx(ins.totalOut), Icons.Rounded.NorthEast, mc.moneyOut, Modifier.weight(1f).fillMaxHeight(),
                         caption = prev?.let { compareLabel(ins.totalOut, it.totalOut, prevName) } ?: "incl. fees")
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     StatTile(
                         "Net flow", (if (ins.net >= 0) "+" else "−") + Fmt.ugx(kotlin.math.abs(ins.net)),
-                        Icons.Rounded.SwapVert, if (ins.net >= 0) mc.moneyIn else mc.moneyOut, Modifier.weight(1f),
+                        Icons.Rounded.SwapVert, if (ins.net >= 0) mc.moneyIn else mc.moneyOut, Modifier.weight(1f).fillMaxHeight(),
+                        caption = "money in minus out",
                     )
-                    StatTile("Fees paid", Fmt.ugx(ins.fees), Icons.Rounded.Percent, mc.fee, Modifier.weight(1f),
-                        caption = if (ins.totalOut > 0) "%.1f%% of spending".format(ins.fees * 100.0 / ins.totalOut) else null)
+                    StatTile("Fees paid", Fmt.ugx(ins.fees), Icons.Rounded.Percent, mc.fee, Modifier.weight(1f).fillMaxHeight(),
+                        caption = if (ins.totalOut > 0) "%.1f%% of spending".format(ins.fees * 100.0 / ins.totalOut) else "no spending")
                 }
             }
         }
