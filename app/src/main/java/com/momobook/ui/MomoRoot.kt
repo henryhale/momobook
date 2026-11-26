@@ -146,7 +146,7 @@ fun MomoRoot(vm: MainViewModel = viewModel()) {
                         onMonthOffset = { calendarMonth = it },
                         onOpenDay = { openDay = it },
                     )
-                    Tab.INSIGHTS -> InsightsScreen(entries = entries)
+                    Tab.INSIGHTS -> InsightsScreen(entries = entries, onOpen = { selected = it })
                     Tab.SETTINGS -> SettingsScreen(
                         theme = themeMode, onTheme = vm::setTheme,
                         hideOnLaunch = hideOnLaunch, onHideOnLaunch = vm::setHideOnLaunch,

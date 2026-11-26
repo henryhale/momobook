@@ -6,9 +6,13 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -96,17 +100,20 @@ fun DonutWithLegend(slices: List<Slice>, centerLabel: String, centerValue: Strin
 
 /** Ranked horizontal bars: name, total, count and a proportional bar. */
 @Composable
-fun RankedBars(items: List<Ranked>, color: Color, countNoun: String = "txn") {
+fun RankedBars(items: List<Ranked>, color: Color, countNoun: String = "txn", onClick: ((Ranked) -> Unit)? = null) {
     val maxV = items.maxOfOrNull { it.amount }?.coerceAtLeast(1) ?: 1
     var started by remember(items) { mutableStateOf(false) }
     LaunchedEffect(items) { started = true }
-    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(if (onClick != null) 4.dp else 14.dp)) {
         items.forEachIndexed { i, r ->
             val frac by animateFloatAsState(
                 if (started) r.amount.toFloat() / maxV else 0f,
                 tween(700, delayMillis = i * 70, easing = FastOutSlowInEasing), label = "bar",
             )
-            Column {
+            Column(
+                if (onClick == null) Modifier
+                else Modifier.clip(RoundedCornerShape(14.dp)).clickable { onClick(r) }.padding(horizontal = 6.dp, vertical = 6.dp)
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         Modifier.size(22.dp).clip(CircleShape).background(color.copy(alpha = .14f)),
@@ -121,6 +128,10 @@ fun RankedBars(items: List<Ranked>, color: Color, countNoun: String = "txn") {
                         )
                     }
                     FitText(Fmt.ugx(r.amount), Modifier.widthIn(max = 170.dp), style = MaterialTheme.typography.bodyMedium.merge(Tabular), fontWeight = FontWeight.Bold)
+                    if (onClick != null) Icon(
+                        Icons.Rounded.ChevronRight, null, Modifier.padding(start = 2.dp).size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
                 Spacer(Modifier.height(6.dp))
                 Box(

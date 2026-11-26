@@ -27,7 +27,7 @@ import com.momobook.ui.theme.Tabular
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun InsightsScreen(entries: List<Entry>) {
+fun InsightsScreen(entries: List<Entry>, onOpen: (Entry) -> Unit) {
     var period by rememberSaveable { mutableStateOf(Period.MONTH) }
     /** null = preset range; otherwise months from this month (0 = this month, -1 = last month…). */
     var monthOffset by rememberSaveable { mutableStateOf<Int?>(null) }
@@ -38,6 +38,8 @@ fun InsightsScreen(entries: List<Entry>) {
     // Month mode compares against the previous month.
     val prev = remember(entries, monthOffset) { monthOffset?.let { Analytics.compute(entries, Analytics.monthWindow(it - 1)) } }
     val prevName = remember(monthOffset) { monthOffset?.let { java.text.SimpleDateFormat("MMM", java.util.Locale.getDefault()).format(Analytics.monthWindow(it - 1).from) } ?: "" }
+    /** The payee or source whose transactions are listed in a sheet; second = money in. */
+    var picked by remember { mutableStateOf<Pair<String, Boolean>?>(null) }
     val mc = LocalMoneyColors.current
     val lineColor = if (MaterialTheme.colorScheme.primary == Brand.Ink) Color(0xFF2E90FA) else Brand.Yellow
 
@@ -121,12 +123,12 @@ fun InsightsScreen(entries: List<Entry>) {
         }
         if (ins.topPayees.isNotEmpty()) item {
             SectionCard(title = "Top spending", subtitle = "Payees, merchants and services you paid most") {
-                RankedBars(ins.topPayees, mc.moneyOut, "payment")
+                RankedBars(ins.topPayees, mc.moneyOut, "payment") { picked = it.name to false }
             }
         }
         if (ins.topSenders.isNotEmpty()) item {
             SectionCard(title = "Top sources", subtitle = "Agents, people and companies that sent you money") {
-                RankedBars(ins.topSenders, mc.moneyIn, "deposit")
+                RankedBars(ins.topSenders, mc.moneyIn, "deposit") { picked = it.name to true }
             }
         }
         if (ins.balance.size >= 2) item {
@@ -164,6 +166,12 @@ fun InsightsScreen(entries: List<Entry>) {
             }
         }
     }
+    picked?.let { (name, isIn) ->
+        val list = remember(entries, window, name, isIn) {
+            Analytics.inWindow(entries, window).filter { it.isIn == isIn && it.displayName == name }.sortedByDescending { it.occurredAt }
+        }
+        PayeeSheet(name, isIn, list, onDismiss = { picked = null }, onOpen = onOpen)
+    }
 }
 
 private fun categorySlices(ranked: List<Ranked>): List<Slice> {
@@ -186,5 +194,30 @@ private fun Highlight(icon: ImageVector, label: String, value: String, caption: 
         }
         Spacer(Modifier.width(8.dp))
         FitText(value, Modifier.widthIn(max = 160.dp), style = MaterialTheme.typography.titleSmall.merge(Tabular), fontWeight = FontWeight.Bold)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PayeeSheet(name: String, isIn: Boolean, list: List<Entry>, onDismiss: () -> Unit, onOpen: (Entry) -> Unit) {
+    val mc = LocalMoneyColors.current
+    val total = list.sumOf { if (isIn) it.amount else it.outTotal }
+    val noun = if (isIn) "deposit" else "payment"
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+            Text(name, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Spacer(Modifier.height(2.dp))
+            Text(
+                "${list.size} $noun${if (list.size == 1) "" else "s"} · " + (if (isIn) "+" else "−") + Fmt.ugx(total),
+                style = MaterialTheme.typography.labelMedium.merge(Tabular), color = if (isIn) mc.moneyIn else mc.moneyOut,
+            )
+            Spacer(Modifier.height(8.dp))
+        }
+        LazyColumn(
+            Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(start = 12.dp, end = 12.dp, bottom = 32.dp),
+        ) {
+            items(list.size, key = { list[it].id }) { i -> EntryRow(list[i], onClick = { onOpen(list[i]) }, showDate = true) }
+        }
     }
 }
