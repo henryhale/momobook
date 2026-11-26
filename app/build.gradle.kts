@@ -38,6 +38,8 @@ android {
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.findByName("release")
+            // Bundle native debug symbols (from Compose's graphics-path lib) so Play can symbolicate native crashes.
+            ndk { debugSymbolLevel = "SYMBOL_TABLE" }
         }
     }
     compileOptions {
