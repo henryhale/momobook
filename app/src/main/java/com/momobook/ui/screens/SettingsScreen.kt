@@ -25,8 +25,9 @@ import com.momobook.data.ThemeMode
 import com.momobook.ui.components.MomoLogo
 import com.momobook.ui.components.SectionCard
 
-private const val AUTHOR = "MomobaseHQ"
-private const val AUTHOR_SITE = "momobase.dev"
+private const val AUTHOR = "Henry Hale"
+private const val AUTHOR_SITE = "henryhale.github.io"
+private const val PRIVACY_URL = "https://henryhale.github.io/momobook/privacy.html"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +44,10 @@ fun SettingsScreen(
     onExport: () -> Unit,
 ) {
     val ctx = LocalContext.current
+    val openUrl: (String) -> Unit = { url ->
+        runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
+            .onFailure { Toast.makeText(ctx, "No browser found", Toast.LENGTH_SHORT).show() }
+    }
     val version = remember {
         runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull() ?: "1.0"
     }
@@ -121,15 +126,14 @@ fun SettingsScreen(
             }
             Spacer(Modifier.height(12.dp))
             Text(
-                "Turns your MTN MoMo, Airtel Money and Centenary Bank SMS into a personal journal with deposits, spending, fees and " +
-                    "insights. Each message is copied into the journal so your history stays even if the SMS is deleted.",
+                "Offline journal and money tracker, built from your messages. Deposits, spending, fees and insights, all on your " +
+                    "phone. Each message is copied into the journal so your history stays even if the SMS is deleted.\n\n" +
+                    "Currently reads MTN MoMo, Airtel Money and Centenary Bank messages, with more to come.",
                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(12.dp))
-            ActionRow(Icons.Rounded.Language, "Built by $AUTHOR", AUTHOR_SITE, {
-                runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://$AUTHOR_SITE"))) }
-                    .onFailure { Toast.makeText(ctx, "No browser found", Toast.LENGTH_SHORT).show() }
-            })
+            ActionRow(Icons.Rounded.Policy, "Privacy policy", "How MoMoBook handles your data", { openUrl(PRIVACY_URL) })
+            ActionRow(Icons.Rounded.Language, "Built by $AUTHOR", AUTHOR_SITE, { openUrl("https://$AUTHOR_SITE") })
         }
         Spacer(Modifier.height(8.dp))
     }
